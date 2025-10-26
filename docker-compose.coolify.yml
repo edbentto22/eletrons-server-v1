@@ -1,0 +1,269 @@
+# Docker Compose para Coolify - Sistema de Treinamento YOLO
+# Versão otimizada para deployment no Coolify
+# Autor: Sistema de Treinamento YOLO
+# Data: 2025
+
+version: '3.8'
+
+services:
+  # ========================================
+  # BACKEND - Sistema de Treinamento YOLO
+  # ========================================
+  yolo-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    container_name: yolo-training-backend
+    
+    # Configuração de rede para Coolify
+    networks:
+      - coolify
+    
+    # Portas expostas (Coolify gerencia automaticamente)
+    expose:
+      - "8060"
+    
+    # Variáveis de ambiente (configuradas no painel Coolify)
+    environment:
+      # Servidor
+      - HOST=0.0.0.0
+      - PORT=8060
+      - DEBUG=${DEBUG:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # Segurança
+      - API_SECRET=${API_SECRET}
+      - CALLBACK_SECRET=${CALLBACK_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-["*"]}
+      
+      # Diretórios
+      - DATA_DIR=/app/data
+      - DATASETS_DIR=/app/data/datasets
+      - MODELS_DIR=/app/data/models
+      - CHECKPOINTS_DIR=/app/data/checkpoints
+      - JOBS_DIR=/app/data/jobs
+      - LOGS_DIR=/app/logs
+      
+      # YOLO/Ultralytics
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-yolov8n.pt}
+      - DEFAULT_EPOCHS=${DEFAULT_EPOCHS:-100}
+      - DEFAULT_BATCH_SIZE=${DEFAULT_BATCH_SIZE:-16}
+      - DEFAULT_IMAGE_SIZE=${DEFAULT_IMAGE_SIZE:-640}
+      - DEFAULT_LEARNING_RATE=${DEFAULT_LEARNING_RATE:-0.01}
+      - DEFAULT_OPTIMIZER=${DEFAULT_OPTIMIZER:-AdamW}
+      
+      # Sistema
+      - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-3}
+      - SYSTEM_MONITOR_INTERVAL=${SYSTEM_MONITOR_INTERVAL:-5}
+      - JOB_UPDATE_INTERVAL=${JOB_UPDATE_INTERVAL:-2}
+      - CLEANUP_INTERVAL=${CLEANUP_INTERVAL:-3600}
+      
+      # GPU (se disponível)
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+      - TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST:-"6.0;6.1;7.0;7.5;8.0;8.6"}
+    
+    # Volumes persistentes (configurados no Coolify)
+    volumes:
+      - yolo_data:/app/data
+      - yolo_logs:/app/logs
+      - yolo_models:/app/models
+      - yolo_temp:/tmp
+    
+    # Health check otimizado para Coolify
+    healthcheck:
+      test: ["CMD", "python", "test_health.py"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+    
+    # Configurações de recursos
+    deploy:
+      resources:
+        limits:
+          memory: ${MEMORY_LIMIT:-4G}
+          cpus: ${CPU_LIMIT:-2.0}
+        reservations:
+          memory: ${MEMORY_RESERVATION:-2G}
+          cpus: ${CPU_RESERVATION:-1.0}
+    
+    # Política de restart
+    restart: unless-stopped
+    
+    # Labels para Coolify
+    labels:
+      - "coolify.managed=true"
+      - "coolify.version=4"
+      - "coolify.type=application"
+      - "coolify.name=yolo-training-backend"
+      - "coolify.description=Sistema de Treinamento YOLO - Backend FastAPI"
+
+  # ========================================
+  # FRONTEND - Interface Web React
+  # ========================================
+  yolo-frontend:
+    build:
+      context: ./interface-design
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+        - VITE_API_URL=${BACKEND_URL:-http://localhost:8060}
+        - VITE_API_SECRET=${API_SECRET}
+    container_name: yolo-training-frontend
+    
+    # Configuração de rede para Coolify
+    networks:
+      - coolify
+    
+    # Portas expostas
+    expose:
+      - "3000"
+    
+    # Variáveis de ambiente
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - VITE_API_URL=${BACKEND_URL:-http://localhost:8060}
+      - VITE_API_SECRET=${API_SECRET}
+      - VITE_API_TIMEOUT=${API_TIMEOUT:-10000}
+      - VITE_WEBSOCKET_URL=${WEBSOCKET_URL:-ws://localhost:8060}
+    
+    # Dependências
+    depends_on:
+      yolo-backend:
+        condition: service_healthy
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Configurações de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: 0.5
+        reservations:
+          memory: 512M
+          cpus: 0.25
+    
+    # Política de restart
+    restart: unless-stopped
+    
+    # Labels para Coolify
+    labels:
+      - "coolify.managed=true"
+      - "coolify.version=4"
+      - "coolify.type=application"
+      - "coolify.name=yolo-training-frontend"
+      - "coolify.description=Sistema de Treinamento YOLO - Frontend React"
+
+  # ========================================
+  # REDIS - Cache e Sessões (Opcional)
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: yolo-redis
+    
+    networks:
+      - coolify
+    
+    expose:
+      - "6379"
+    
+    # Configuração Redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-yolo_redis_2025}
+    
+    # Volume para persistência
+    volumes:
+      - redis_data:/data
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    # Configurações de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: 0.25
+        reservations:
+          memory: 256M
+          cpus: 0.1
+    
+    restart: unless-stopped
+    
+    labels:
+      - "coolify.managed=true"
+      - "coolify.version=4"
+      - "coolify.type=database"
+      - "coolify.name=yolo-redis"
+
+# ========================================
+# VOLUMES PERSISTENTES
+# ========================================
+volumes:
+  # Dados principais do sistema
+  yolo_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-./data}
+  
+  # Logs do sistema
+  yolo_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LOGS_PATH:-./logs}
+  
+  # Modelos treinados
+  yolo_models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${MODELS_PATH:-./models}
+  
+  # Arquivos temporários
+  yolo_temp:
+    driver: local
+  
+  # Dados do Redis
+  redis_data:
+    driver: local
+
+# ========================================
+# REDES
+# ========================================
+networks:
+  coolify:
+    external: true
+    name: coolify
+
+# ========================================
+# CONFIGURAÇÕES ADICIONAIS
+# ========================================
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-deploy-policy: &default-deploy
+  restart_policy:
+    condition: unless-stopped
+    delay: 5s
+    max_attempts: 3
+    window: 120s
