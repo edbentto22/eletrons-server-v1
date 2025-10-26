@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  yolo-training-system:
+    build: .
+    container_name: yolo-training-system
+    ports:
+      - "8000:8000"
+    volumes:
+      # Dados persistentes
+      - ./data:/home/yolo/app/data
+      # Logs
+      - ./logs:/home/yolo/app/logs
+      # Configuração (opcional)
+      - ./.env:/home/yolo/app/.env:ro
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Serviço com GPU (descomente se tiver GPU NVIDIA)
+  # yolo-training-system-gpu:
+  #   build: .
+  #   container_name: yolo-training-system-gpu
+  #   ports:
+  #     - "8000:8000"
+  #   volumes:
+  #     - ./data:/home/yolo/app/data
+  #     - ./logs:/home/yolo/app/logs
+  #     - ./.env:/home/yolo/app/.env:ro
+  #   environment:
+  #     - HOST=0.0.0.0
+  #     - PORT=8000
+  #     - DEBUG=false
+  #     - LOG_LEVEL=INFO
+  #     - CUDA_VISIBLE_DEVICES=0
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  #   restart: unless-stopped
+
+networks:
+  default:
+    name: yolo-network

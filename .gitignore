@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+
+# Environments
+.env
+.venv/
+venv/
+ENV/
+
+# Data & Logs
+/data/
+/logs/
+outputs/
+
+# Node/Frontend
+node_modules/
+web-ui/node_modules/
+web-ui/.next/
+web-ui/dist/
+web-ui/build/
+web-ui/.env
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Docker
+*.log
+
+# Cache
+.cache/
+
+# Misc
+*.swp
+*.swo
+
+# Coverage
+.coverage
+htmlcov/

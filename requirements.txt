@@ -1,0 +1,53 @@
+# Sistema de Treinamento YOLO - Dependências
+# Baseado no PRD - Seção 4: Especificações Técnicas
+
+# Framework Web
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Validação e Serialização
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# YOLO e Visão Computacional
+ultralytics==8.0.220
+torch>=2.0.0
+torchvision>=0.15.0
+opencv-python==4.8.1.78
+Pillow==10.1.0
+
+# Processamento de Dados
+numpy==1.24.4
+pandas==2.1.4
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Monitoramento de Sistema
+psutil==5.9.6
+GPUtil==1.4.0
+py3nvml==0.2.7
+
+# Utilitários
+python-dotenv==1.0.0
+aiofiles==23.2.1
+httpx==0.25.2
+Jinja2==3.1.2
+
+# Desenvolvimento e Testes
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+
+# Opcional: Jupyter para análise
+jupyter==1.0.0
+ipywidgets==8.1.1
+
+# Opcional: TensorBoard para visualização
+tensorboard==2.15.1
+
+# Opcional: Exportação de modelos
+onnx==1.15.0
+onnxruntime==1.16.3
