@@ -12,6 +12,10 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: yolo-training-backend
+   restart: on-failure
+   depends_on:
+    redis:
+      condition: service_healthy
     
     # Configuração de rede para Coolify
     networks:
