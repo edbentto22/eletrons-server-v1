@@ -12,7 +12,7 @@ services:
       # Logs
       - ./logs:/home/yolo/app/logs
       # Configuração (opcional)
-      - ./.env:/home/yolo/app/.env:ro
+      # - ./.env:/home/yolo/app/.env:ro  # Removido para Coolify; use Environment Variables no painel
     environment:
       - HOST=0.0.0.0
       - PORT=8000
@@ -20,7 +20,7 @@ services:
       - LOG_LEVEL=INFO
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request, sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health').status==200 else sys.exit(1)\""]
       interval: 30s
       timeout: 10s
       retries: 3
