@@ -155,51 +155,7 @@ services:
       - "coolify.name=yolo-training-frontend"
       - "coolify.description=Sistema de Treinamento YOLO - Frontend React"
 
-  # ========================================
-  # REDIS - Cache e Sessões (Opcional)
-  # ========================================
-  redis:
-    image: redis:7-alpine
-    container_name: yolo-redis
-    
-    networks:
-      - coolify
-    
-    expose:
-      - "6379"
-    
-    # Configuração Redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-yolo_redis_2025}
-    
-    # Volume para persistência
-    volumes:
-      - redis_data:/data
-    
-    # Health check
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    
-    # Configurações de recursos
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: 0.25
-        reservations:
-          memory: 256M
-          cpus: 0.1
-    
-    restart: unless-stopped
-    
-    labels:
-      - "coolify.managed=true"
-      - "coolify.version=4"
-      - "coolify.type=database"
-      - "coolify.name=yolo-redis"
-
+  
 # ========================================
 # VOLUMES PERSISTENTES
 # ========================================
