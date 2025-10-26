@@ -10,11 +10,17 @@ COPY package*.json ./
 # Install dependencies (incluindo devDependencies para o build)
 RUN npm ci
 
+# Verify Vite installation and npm scripts
+RUN npm list vite || echo "Vite not found in dependencies"
+RUN cat package.json | grep -A 5 '"scripts"'
+RUN which npm && npm --version
+RUN ls -la node_modules/.bin/ | grep vite || echo "Vite binary not found"
+
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application with explicit path
+RUN npx vite build
 
 # Production stage
 FROM nginx:alpine
