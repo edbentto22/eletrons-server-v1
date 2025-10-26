@@ -25,6 +25,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - coolify
 
   # Serviço com GPU (descomente se tiver GPU NVIDIA)
   # yolo-training-system-gpu:
@@ -52,5 +54,5 @@ services:
   #   restart: unless-stopped
 
 networks:
-  default:
-    name: yolo-network
+  coolify:
+    external: true
