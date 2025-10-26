@@ -16,6 +16,9 @@ RUN useradd --create-home --shell /bin/bash yolo
 USER yolo
 WORKDIR /home/yolo/app
 
+# Adicionar diretório local do pip ao PATH
+ENV PATH="/home/yolo/.local/bin:$PATH"
+
 # Copiar requirements primeiro (para cache do Docker)
 COPY --chown=yolo:yolo requirements.txt .
 
@@ -31,9 +34,7 @@ RUN mkdir -p data/{models,datasets,outputs,logs,temp}
 # Expor porta (padrão)
 EXPOSE 8000
 
-# Healthcheck para orquestradores (Coolify, Docker, etc.)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+# Healthcheck removido - será controlado pelo docker-compose.yml
 
 # Comando padrão (respeita PORT do ambiente)
 CMD ["sh", "-c", "python run_server.py --host 0.0.0.0 --port ${PORT:-8000}"]
