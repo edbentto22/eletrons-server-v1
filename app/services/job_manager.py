@@ -17,7 +17,8 @@ from app.models.training import (
     DatasetInfo, TrainingMetrics, ProgressUpdate
 )
 from app.core.config import settings
-from app.services.yolo_trainer import YOLOTrainer
+# Lazy import: YOLOTrainer will be imported only when starting training to avoid heavy dependencies at API startup
+# from app.services.yolo_trainer import YOLOTrainer
 
 logger = logging.getLogger("jobs")
 
@@ -30,7 +31,8 @@ class JobManager:
         self.active_jobs: Dict[str, asyncio.Task] = {}
         self.job_events: Dict[str, List[ProgressUpdate]] = {}
         self.executor = ThreadPoolExecutor(max_workers=settings.MAX_CONCURRENT_JOBS)
-        self.yolo_trainer = YOLOTrainer()
+        # Defer YOLOTrainer initialization to training time to prevent blocking imports (torch/cv2) during app startup
+        self.yolo_trainer = None  # type: Optional[object]
         
         # Arquivo de persistência
         self.jobs_file = settings.DATA_DIR / "jobs.json"
@@ -48,8 +50,11 @@ class JobManager:
                 task.cancel()
                 logger.info(f"🛑 Job {job_id} cancelado durante cleanup")
                 
-        # Salvar estado
-        await self.save_jobs()
+        # Salvar estado apenas se houver jobs carregados
+        if self.jobs:
+            await self.save_jobs()
+        else:
+            logger.info("📭 Nenhum job para salvar durante cleanup")
         
         # Fechar executor
         self.executor.shutdown(wait=True)
@@ -58,20 +63,33 @@ class JobManager:
     async def load_jobs(self):
         """Carregar jobs do arquivo"""
         try:
+            logger.info(f"🔍 Procurando arquivo de jobs em: {self.jobs_file}")
+            logger.info(f"📁 Arquivo existe: {self.jobs_file.exists()}")
+            
             if self.jobs_file.exists():
+                logger.info(f"📖 Lendo conteúdo do arquivo...")
                 with open(self.jobs_file, 'r', encoding='utf-8') as f:
                     jobs_data = json.load(f)
-                    
-                for job_data in jobs_data:
-                    job = TrainingJob(**job_data)
-                    self.jobs[job.id] = job
-                    
-                    # Resetar jobs que estavam rodando
-                    if job.status == JobStatus.RUNNING:
-                        job.status = JobStatus.FAILED
-                        job.error_message = "Sistema reiniciado durante execução"
+                
+                logger.info(f"📊 Encontrados {len(jobs_data)} jobs no arquivo")
+                
+                for i, job_data in enumerate(jobs_data):
+                    try:
+                        job = TrainingJob(**job_data)
+                        self.jobs[job.id] = job
+                        logger.info(f"✅ Job {i+1}: {job.id} - {job.name} (status: {job.status})")
                         
-                logger.info(f"📂 {len(self.jobs)} jobs carregados do arquivo")
+                        # Resetar jobs que estavam rodando
+                        if job.status == JobStatus.RUNNING:
+                            job.status = JobStatus.FAILED
+                            job.error_message = "Sistema reiniciado durante execução"
+                            logger.info(f"🔄 Job {job.id} redefinido de RUNNING para FAILED")
+                            
+                    except Exception as e:
+                        logger.error(f"❌ Erro ao carregar job {i+1}: {e}")
+                        logger.error(f"📋 Dados do job: {job_data}")
+                        
+                logger.info(f"📂 Total de {len(self.jobs)} jobs carregados do arquivo")
                 
         except Exception as e:
             logger.error(f"Erro ao carregar jobs: {e}")
@@ -79,6 +97,9 @@ class JobManager:
     async def save_jobs(self):
         """Salvar jobs no arquivo"""
         try:
+            logger.info(f"💾 Iniciando salvamento de jobs...")
+            logger.info(f"📊 Jobs atuais no manager: {len(self.jobs)}")
+            
             jobs_data = []
             for job in self.jobs.values():
                 # Converter para dict, tratando datetime
@@ -90,12 +111,16 @@ class JobManager:
                         job_dict[field] = job_dict[field].isoformat()
                         
                 jobs_data.append(job_dict)
-                
+            
+            logger.info(f"📝 Salvando {len(jobs_data)} jobs no arquivo")
+            
             with open(self.jobs_file, 'w', encoding='utf-8') as f:
                 json.dump(jobs_data, f, indent=2, ensure_ascii=False)
-                
+            
+            logger.info(f"✅ Jobs salvos com sucesso em {self.jobs_file}")
+            
         except Exception as e:
-            logger.error(f"Erro ao salvar jobs: {e}")
+            logger.error(f"❌ Erro ao salvar jobs: {e}")
             
     def generate_job_id(self) -> str:
         """Gerar ID único para job"""
@@ -335,6 +360,11 @@ class JobManager:
         """Executar treinamento em thread separada"""
         try:
             logger.info(f"🏃 Iniciando treinamento do job {job.id}")
+            
+            # Lazy import and instantiate YOLOTrainer when training actually starts
+            if self.yolo_trainer is None:
+                from app.services.yolo_trainer import YOLOTrainer
+                self.yolo_trainer = YOLOTrainer()
             
             # Callback para atualizações de progresso
             async def progress_callback(metrics: TrainingMetrics):

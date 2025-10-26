@@ -126,7 +126,7 @@ def main():
     parser = argparse.ArgumentParser(description="Servidor do Sistema de Treinamento YOLO")
     
     parser.add_argument("--host", default="0.0.0.0", help="Host do servidor (padrão: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=8000, help="Porta do servidor (padrão: 8000)")
+    parser.add_argument("--port", type=int, default=8060, help="Porta do servidor (padrão: 8060)")
     parser.add_argument("--reload", action="store_true", help="Ativar reload automático (desenvolvimento)")
     parser.add_argument("--workers", type=int, default=1, help="Número de workers (padrão: 1)")
     parser.add_argument("--log-level", default="info", choices=["critical", "error", "warning", "info", "debug"], help="Nível de log")

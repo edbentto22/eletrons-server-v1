@@ -5,7 +5,7 @@ services:
     build: .
     container_name: yolo-training-system
     expose:
-      - "8000"
+      - "8060"
     volumes:
       # Dados persistentes
       - ./data:/home/yolo/app/data
@@ -15,7 +15,7 @@ services:
       # - ./.env:/home/yolo/app/.env:ro  # Removido para Coolify; use Environment Variables no painel
     environment:
       - HOST=0.0.0.0
-      - PORT=8000
+      - PORT=8060
       - DEBUG=false
       - LOG_LEVEL=INFO
     restart: unless-stopped
@@ -33,14 +33,14 @@ services:
   #   build: .
   #   container_name: yolo-training-system-gpu
   #   expose:
-  #     - "8000"
+  #     - "8060"
   #   volumes:
   #     - ./data:/home/yolo/app/data
   #     - ./logs:/home/yolo/app/logs
   #     - ./.env:/home/yolo/app/.env:ro
   #   environment:
   #     - HOST=0.0.0.0
-  #     - PORT=8000
+  #     - PORT=8060
   #     - DEBUG=false
   #     - LOG_LEVEL=INFO
   #     - CUDA_VISIBLE_DEVICES=0

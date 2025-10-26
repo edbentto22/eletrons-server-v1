@@ -2,13 +2,13 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 
 from app.models.training import TrainingJob, JobCreateRequest
-from app.services.job_manager import JobManager
 from app.services.sse_manager import SSEManager, create_sse_response
 from app.core.security import verify_api_key
+from app.core.globals import job_manager
 
 router = APIRouter(prefix="/jobs", tags=["jobs"], dependencies=[Depends(verify_api_key)])
 
-job_manager = JobManager()
+# Usar a instância global do JobManager já inicializada
 sse_manager = SSEManager()
 
 

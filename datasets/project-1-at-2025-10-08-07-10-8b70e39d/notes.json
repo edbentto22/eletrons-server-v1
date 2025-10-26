@@ -1,0 +1,81 @@
+{
+  "categories": [
+    {
+      "id": 0,
+      "name": "cabo_partido"
+    },
+    {
+      "id": 1,
+      "name": "caixa_derivacao"
+    },
+    {
+      "id": 2,
+      "name": "caixa_emenda_fibra"
+    },
+    {
+      "id": 3,
+      "name": "camera_monitoramento"
+    },
+    {
+      "id": 4,
+      "name": "coaxial"
+    },
+    {
+      "id": 5,
+      "name": "cordoalha"
+    },
+    {
+      "id": 6,
+      "name": "drop"
+    },
+    {
+      "id": 7,
+      "name": "fibra_optica"
+    },
+    {
+      "id": 8,
+      "name": "nivel_fixacao1"
+    },
+    {
+      "id": 9,
+      "name": "nivel_fixacao2"
+    },
+    {
+      "id": 10,
+      "name": "nivel_fixacao3"
+    },
+    {
+      "id": 11,
+      "name": "nivel_fixacao4"
+    },
+    {
+      "id": 12,
+      "name": "nivel_fixacao5"
+    },
+    {
+      "id": 13,
+      "name": "nivel_fixacao6"
+    },
+    {
+      "id": 14,
+      "name": "poste"
+    },
+    {
+      "id": 15,
+      "name": "rede_telecom_altura_mt"
+    },    
+    {
+      "id": 17,
+      "name": "reserva_tecnica"
+    },
+    {
+      "id": 18,
+      "name": "tronco_metalico"
+    }
+  ],
+  "info": {
+    "year": 2025,
+    "version": "1.0",
+    "contributor": "Label Studio"
+  }
+}

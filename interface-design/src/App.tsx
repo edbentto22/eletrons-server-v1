@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { JobDetail } from './components/JobDetail';
-import { mockJobs } from './lib/mockData';
+import { useJobs } from './hooks/useJobs';
 
 export default function App() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const { jobs } = useJobs();
 
   const selectedJob = selectedJobId 
-    ? mockJobs.find((job) => job.job_id === selectedJobId)
+    ? jobs.find((job) => job.id === selectedJobId)
     : null;
 
   return (

@@ -396,7 +396,7 @@ async def _analyze_dataset(dataset_path: Path) -> DatasetInfo:
             test_images=test_images if test_images > 0 else None,
             total_images=train_images + val_images + test_images,
             created_at=stat.st_ctime,
-            size_bytes=_calculate_directory_size(dataset_path)
+            total_size=_calculate_directory_size(dataset_path)
         )
         
     except Exception as e:
@@ -414,7 +414,7 @@ async def _analyze_dataset(dataset_path: Path) -> DatasetInfo:
             test_images=None,
             total_images=0,
             created_at=stat.st_ctime,
-            size_bytes=_calculate_directory_size(dataset_path)
+            total_size=_calculate_directory_size(dataset_path)
         )
 
 

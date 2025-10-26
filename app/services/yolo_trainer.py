@@ -13,6 +13,8 @@ from datetime import datetime
 import torch
 from ultralytics import YOLO
 import yaml
+import os
+import re
 
 from app.models.training import TrainingJob, TrainingMetrics, ModelType
 from app.core.config import settings
@@ -52,7 +54,7 @@ class YOLOTrainer:
             job_dir.mkdir(parents=True, exist_ok=True)
             
             # Configurar modelo
-            model = self._setup_model(job.config.model_type, job.config.pretrained)
+            model = self._setup_model(job.config.base_model, getattr(job.config, 'pretrained', True))
             
             # Preparar dataset
             dataset_config = await self._prepare_dataset(job, job_dir)
@@ -142,7 +144,16 @@ class YOLOTrainer:
             model_file = model_files.get(model_type, "yolov8n.pt")
             
             logger.info(f"📦 Carregando modelo: {model_file}")
-            model = YOLO(model_file)
+            try:
+                model = YOLO(model_file)
+            except Exception as e:
+                # Fallback: se não conseguir carregar pesos .pt (ex.: sem internet), usar YAML
+                if model_file.endswith('.pt'):
+                    yaml_file = model_file.replace('.pt', '.yaml')
+                    logger.warning(f"Falha ao carregar '{model_file}' ({e}). Tentando YAML '{yaml_file}' sem pesos pré-treinados.")
+                    model = YOLO(yaml_file)
+                else:
+                    raise
             
             return model
             
@@ -158,44 +169,200 @@ class YOLOTrainer:
             # Verificar se já existe data.yaml
             original_yaml = dataset_path / "data.yaml"
             if original_yaml.exists():
-                # Copiar para diretório do job
-                job_yaml = job_dir / "dataset.yaml"
-                shutil.copy2(original_yaml, job_yaml)
-                
-                # Atualizar caminhos para absolutos
-                with open(job_yaml, 'r') as f:
-                    data = yaml.safe_load(f)
-                    
-                # Atualizar caminhos
+                # Normalizar dataset para garantir índices de classes contínuos e caminhos absolutos
+                with open(original_yaml, 'r') as f:
+                    data = yaml.safe_load(f) or {}
+                original_names = data.get('names', [])
+                names_list: list[str] = []
+                id_map_from_yaml: dict[int, int] = {}
+                if isinstance(original_names, dict):
+                    sorted_ids = sorted(original_names.keys())
+                    names_list = [original_names[i] for i in sorted_ids]
+                    for new_idx, orig_id in enumerate(sorted_ids):
+                        id_map_from_yaml[int(orig_id)] = new_idx
+                elif isinstance(original_names, list):
+                    names_list = original_names
+                else:
+                    names_list = []
+
+                norm_root = job_dir / "normalized_dataset"
+                (norm_root / "images").mkdir(parents=True, exist_ok=True)
+                (norm_root / "labels").mkdir(parents=True, exist_ok=True)
+
+                class_mapping: dict[int, int] = dict(id_map_from_yaml)
+
+                if not class_mapping:
+                    used_ids: set[int] = set()
+                    for split in ['train', 'val', 'test']:
+                        labels_dir = dataset_path / 'labels' / split
+                        if labels_dir.exists():
+                            for lbl_file in labels_dir.glob('*.txt'):
+                                with open(lbl_file, 'r') as lf:
+                                    for line in lf:
+                                        parts = line.strip().split()
+                                        if parts:
+                                            try:
+                                                used_ids.add(int(parts[0]))
+                                            except ValueError:
+                                                continue
+                    sorted_used = sorted(used_ids)
+                    for new_idx, orig_id in enumerate(sorted_used):
+                        class_mapping[orig_id] = new_idx
+                    if names_list:
+                        names_list = [names_list[i] for i in sorted_used if i < len(names_list)]
+                    else:
+                        names_list = [f"class_{i}" for i in sorted_used]
+
+                def remap_label_file(src_path: Path, dst_path: Path):
+                    lines_out = []
+                    if not src_path.exists():
+                        return False
+                    with open(src_path, 'r') as lf:
+                        for line in lf:
+                            parts = line.strip().split()
+                            if not parts:
+                                continue
+                            try:
+                                orig_cls = int(parts[0])
+                            except ValueError:
+                                lines_out.append(line)
+                                continue
+                            if orig_cls in class_mapping:
+                                parts[0] = str(class_mapping[orig_cls])
+                            else:
+                                logger.warning(f"Classe {orig_cls} não mapeada em {src_path}, descartando anotação.")
+                                continue
+                            lines_out.append(" ".join(parts) + "\n")
+                    dst_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(dst_path, 'w') as df:
+                        df.writelines(lines_out)
+                    return True
+
+                splits = []
                 for split in ['train', 'val', 'test']:
-                    if split in data:
-                        split_path = dataset_path / data[split]
-                        if not split_path.is_absolute():
-                            data[split] = str(dataset_path / data[split])
-                        else:
-                            data[split] = str(split_path)
-                            
-                # Salvar configuração atualizada
+                    images_dir = dataset_path / 'images' / split
+                    labels_dir = dataset_path / 'labels' / split
+                    if images_dir.exists():
+                        splits.append(split)
+                        (norm_root / 'images' / split).mkdir(parents=True, exist_ok=True)
+                        (norm_root / 'labels' / split).mkdir(parents=True, exist_ok=True)
+                        for img_file in images_dir.glob('*'):
+                            if img_file.is_file():
+                                dst = norm_root / 'images' / split / img_file.name
+                                try:
+                                    if dst.exists():
+                                        dst.unlink()
+                                    os.symlink(img_file, dst)
+                                except Exception:
+                                    shutil.copy2(img_file, dst)
+                        if labels_dir.exists():
+                            for lbl_file in labels_dir.glob('*.txt'):
+                                dst_lbl = norm_root / 'labels' / split / lbl_file.name
+                                remap_label_file(lbl_file, dst_lbl)
+
+                names_dict = {i: name for i, name in enumerate(names_list)} if names_list else {}
+                job_yaml = job_dir / "dataset.yaml"
+                config = {
+                    'path': str(norm_root),
+                    'train': str(norm_root / 'images' / 'train') if 'train' in splits else None,
+                    'val': str(norm_root / 'images' / 'val') if 'val' in splits else None,
+                }
+                if 'test' in splits:
+                    config['test'] = str(norm_root / 'images' / 'test')
+                if names_dict:
+                    config['names'] = names_dict
+                config = {k: v for k, v in config.items() if v is not None}
                 with open(job_yaml, 'w') as f:
-                    yaml.dump(data, f, default_flow_style=False)
-                    
+                    yaml.dump(config, f, default_flow_style=False)
                 return str(job_yaml)
+
                 
             else:
-                # Criar configuração do dataset
-                config = {
-                    'path': str(dataset_path),
-                    'train': str(dataset_path / 'images' / 'train'),
-                    'val': str(dataset_path / 'images' / 'val'),
-                    'names': {i: name for i, name in enumerate(job.dataset.classes)}
-                }
+                # Criar dataset normalizado com índices de classes contínuos
+                norm_root = job_dir / "normalized_dataset"
+                (norm_root / "images").mkdir(parents=True, exist_ok=True)
+                (norm_root / "labels").mkdir(parents=True, exist_ok=True)
                 
+                # Construir mapeamento original_id -> novo_id com base na lista de classes detectadas
+                class_mapping: dict[int, int] = {}
+                mapping_possible = True
+                for new_idx, name in enumerate(job.dataset.classes):
+                    m = re.search(r"(\d+)$", str(name))
+                    if not m:
+                        mapping_possible = False
+                        break
+                    orig_id = int(m.group(1))
+                    class_mapping[orig_id] = new_idx
+                
+                # Função para remapear um arquivo de label
+                def remap_label_file(src_path: Path, dst_path: Path):
+                    lines_out = []
+                    if not src_path.exists():
+                        return False
+                    with open(src_path, 'r') as f:
+                        for line in f:
+                            parts = line.strip().split()
+                            if not parts:
+                                continue
+                            try:
+                                orig_cls = int(parts[0])
+                            except ValueError:
+                                # Mantém linha se não conseguir interpretar índice
+                                lines_out.append(line)
+                                continue
+                            if mapping_possible and orig_cls in class_mapping:
+                                parts[0] = str(class_mapping[orig_cls])
+                            elif mapping_possible:
+                                # Índice fora do conjunto conhecido; registrar e descartar a anotação
+                                logger.warning(f"Label com classe inválida {orig_cls} em {src_path}, descartando anotação.")
+                                continue
+                            lines_out.append(" ".join(parts) + "\n")
+                    dst_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(dst_path, 'w') as f:
+                        f.writelines(lines_out)
+                    return True
+                
+                # Copiar imagens (symlinks) e remapear labels para cada split existente
+                splits = []
+                for split in ['train', 'val', 'test']:
+                    images_dir = dataset_path / 'images' / split
+                    labels_dir = dataset_path / 'labels' / split
+                    if images_dir.exists():
+                        splits.append(split)
+                        # Preparar diretórios
+                        (norm_root / 'images' / split).mkdir(parents=True, exist_ok=True)
+                        (norm_root / 'labels' / split).mkdir(parents=True, exist_ok=True)
+                        # Symlink imagens
+                        for img_file in images_dir.glob('*'):
+                            if img_file.is_file():
+                                dst = norm_root / 'images' / split / img_file.name
+                                try:
+                                    if dst.exists():
+                                        dst.unlink()
+                                    os.symlink(img_file, dst)
+                                except Exception:
+                                    # fallback: copiar arquivo
+                                    shutil.copy2(img_file, dst)
+                        # Remapear labels
+                        if labels_dir.exists():
+                            for lbl_file in labels_dir.glob('*.txt'):
+                                dst_lbl = norm_root / 'labels' / split / lbl_file.name
+                                remap_label_file(lbl_file, dst_lbl)
+                
+                # Configuração do dataset.yaml para o dataset normalizado
+                names_dict = {i: name for i, name in enumerate(job.dataset.classes)}
+                config = {
+                    'path': str(norm_root),
+                    'train': str(norm_root / 'images' / 'train') if 'train' in splits else None,
+                    'val': str(norm_root / 'images' / 'val') if 'val' in splits else None,
+                    'names': names_dict
+                }
+                # Remover chaves None
+                config = {k: v for k, v in config.items() if v is not None}
                 # Adicionar test se existir
-                test_path = dataset_path / 'images' / 'test'
-                if test_path.exists():
-                    config['test'] = str(test_path)
+                if 'test' in splits:
+                    config['test'] = str(norm_root / 'images' / 'test')
                     
-                # Salvar configuração
                 job_yaml = job_dir / "dataset.yaml"
                 with open(job_yaml, 'w') as f:
                     yaml.dump(config, f, default_flow_style=False)

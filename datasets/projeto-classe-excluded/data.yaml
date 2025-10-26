@@ -1,0 +1,40 @@
+# Dataset Configuration for Projeto Classe Excluded
+# Infrastructure Electric Components Detection Dataset
+
+# Dataset paths
+path: /Volumes/SSD NVME - Backup/TRAINING SYSTEM YOLO/datasets/projeto-classe-excluded
+train: images/train
+val: images/val
+test: images/test
+
+# Number of classes
+nc: 18
+
+# Class names
+names:
+  0: cabo_partido
+  1: caixa_derivacao
+  2: caixa_emenda_fibra
+  3: camera_monitoramento
+  4: coaxial
+  5: cordoalha
+  6: drop
+  7: fibra_optica
+  8: nivel_fixacao1
+  9: nivel_fixacao2
+  10: nivel_fixacao3
+  11: nivel_fixacao4
+  12: nivel_fixacao5
+  13: poste
+  14: rede_bt
+  15: rede_mt
+  16: transformador
+  17: vao
+
+# Dataset info
+dataset_name: "Projeto Classe Excluded - Infrastructure Detection"
+description: "Dataset for detection and segmentation of electrical infrastructure components including poles, cables, transformers, and other electrical equipment"
+task: "detection"
+format: "yolo_segmentation"
+total_images: 108006
+total_annotations: 740

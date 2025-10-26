@@ -46,14 +46,14 @@ export function JobCard({ job, onViewDetails }: JobCardProps) {
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="flex items-center gap-3 group-hover:text-primary transition-colors">
-              <span>{job.model_name}</span>
+              <span>{job.name}</span>
               <Badge variant={getStatusBadgeVariant(job.status)} className="ml-auto">
                 {job.status === 'training' && '🔥 '}
                 {job.status}
               </Badge>
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1.5 font-mono">
-              {job.job_id.substring(0, 8)}...
+              {job.id.substring(0, 8)}...
             </p>
           </div>
         </div>
@@ -64,12 +64,12 @@ export function JobCard({ job, onViewDetails }: JobCardProps) {
             <div className="space-y-2.5">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  Época {job.current_epoch}/{job.total_epochs}
+                  Época {job.current_epoch}/{job.config.epochs}
                 </span>
-                <span className="font-mono">{job.progress.toFixed(1)}%</span>
+                <span className="font-mono">{job.progress_percent.toFixed(1)}%</span>
               </div>
               <div className="relative">
-                <Progress value={job.progress} className="h-2.5" />
+                <Progress value={job.progress_percent} className="h-2.5" />
               </div>
             </div>
 
@@ -79,21 +79,21 @@ export function JobCard({ job, onViewDetails }: JobCardProps) {
                   <TrendingUp className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <span className="text-xs text-muted-foreground">mAP50</span>
                 </div>
-                <p className="font-mono">{(job.metrics.current?.mAP50 || 0).toFixed(3)}</p>
+                <p className="font-mono">{(job.metrics?.map50 || 0).toFixed(3)}</p>
               </div>
               <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800">
                 <div className="flex items-center gap-1.5">
                   <Activity className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
                   <span className="text-xs text-muted-foreground">Loss</span>
                 </div>
-                <p className="font-mono">{(job.metrics.current?.box_loss || 0).toFixed(4)}</p>
+                <p className="font-mono">{(job.metrics?.train_loss || 0).toFixed(4)}</p>
               </div>
               <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                   <span className="text-xs text-muted-foreground">ETA</span>
                 </div>
-                <p className="font-mono text-sm">{formatETA(job.eta_seconds || 0)}</p>
+                <p className="font-mono text-sm">{job.metrics?.eta || 'N/A'}</p>
               </div>
             </div>
           </>
@@ -105,15 +105,15 @@ export function JobCard({ job, onViewDetails }: JobCardProps) {
           </div>
         )}
 
-        {job.status === 'completed' && job.metrics.best && (
+        {job.status === 'completed' && job.best_metrics && (
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
               <p className="text-xs text-muted-foreground mb-1">Final mAP50</p>
-              <p className="text-xl text-green-600 dark:text-green-400 font-mono">{job.metrics.best.mAP50.toFixed(3)}</p>
+              <p className="text-xl text-green-600 dark:text-green-400 font-mono">{(job.best_metrics.map50 || 0).toFixed(3)}</p>
             </div>
             <div className="p-3 bg-muted rounded-lg border">
-              <p className="text-xs text-muted-foreground mb-1">Best Epoch</p>
-              <p className="text-xl font-mono">{job.metrics.best.epoch}</p>
+              <p className="text-xs text-muted-foreground mb-1">Precision</p>
+              <p className="text-xl font-mono">{(job.best_metrics.precision || 0).toFixed(3)}</p>
             </div>
           </div>
         )}
@@ -122,7 +122,7 @@ export function JobCard({ job, onViewDetails }: JobCardProps) {
           variant="outline"
           size="sm"
           className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-          onClick={() => onViewDetails(job.job_id)}
+          onClick={() => onViewDetails(job.id)}
         >
           Ver Detalhes →
         </Button>

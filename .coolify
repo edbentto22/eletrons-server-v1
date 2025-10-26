@@ -1,0 +1,53 @@
+# Coolify deployment configuration
+# This file contains Coolify-specific settings
+
+# Application type
+type: docker-compose
+
+# Docker Compose file to use
+compose_file: coolify.yml
+
+# Environment variables for Coolify
+environment:
+  - API_SECRET=v63ilgo6j41o7xn75c
+  - CALLBACK_SECRET=changeme_callback_secret
+  - FRONTEND_URL=https://your-frontend-domain.com
+  - BACKEND_URL=https://your-backend-domain.com
+
+# Health check configuration
+health_check:
+  enabled: true
+  path: /health
+  port: 8000
+  interval: 30s
+  timeout: 10s
+  retries: 3
+
+# Resource limits
+resources:
+  memory: 2G
+  cpu: 1.0
+
+# Persistent volumes
+volumes:
+  - name: yolo_data
+    mount_path: /app/data
+    size: 10G
+  - name: yolo_logs
+    mount_path: /app/logs
+    size: 2G
+
+# Network configuration
+network:
+  type: bridge
+  
+# Build configuration
+build:
+  context: .
+  dockerfile: Dockerfile
+  
+# Deployment strategy
+deployment:
+  strategy: rolling
+  max_unavailable: 0
+  max_surge: 1

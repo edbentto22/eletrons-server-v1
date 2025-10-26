@@ -29,9 +29,8 @@ from app.services.sse_manager import SSEManager
 setup_logging()
 logger = logging.getLogger(__name__)
 
-# Gerenciadores globais
-system_monitor = SystemMonitor()
-job_manager = JobManager()
+# Gerenciadores globais (agora definidos em app/core/globals.py)
+from app.core.globals import system_monitor, job_manager, sse_manager
 
 
 @asynccontextmanager
@@ -173,6 +172,11 @@ async def api_info():
         }
     }
 
+
+@app.get("/live")
+async def live_check():
+    """Endpoint de liveness simples para orquestradores"""
+    return {"status": "ok"}
 
 if __name__ == "__main__":
     # Configuração para desenvolvimento

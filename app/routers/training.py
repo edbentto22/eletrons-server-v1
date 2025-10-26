@@ -8,15 +8,14 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import StreamingResponse
 
 from app.models.training import TrainingJob, JobCreateRequest, ProgressUpdate
-from app.services.job_manager import JobManager
 from app.services.sse_manager import SSEManager, create_sse_response
 from app.core.config import settings
 from app.core.security import verify_api_key
+from app.core.globals import job_manager
 
 router = APIRouter(prefix="/training", tags=["training"], dependencies=[Depends(verify_api_key)])
 
-# Instâncias dos serviços
-job_manager = JobManager()
+# Usar a instância global do JobManager já inicializada
 sse_manager = SSEManager()
 
 

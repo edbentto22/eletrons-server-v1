@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { TrainingJob } from '../types/training';
-import { mockJobs, mockSystemResources, getJobStats } from '../lib/mockData';
-import { listJobs } from '../lib/api';
+import { TrainingJob, SystemResources as SystemResourcesType } from '../types/training';
+import { getJobStats } from '../lib/mockData';
+import { listJobs, getSystemResources } from '../lib/api';
+import { useJobs } from '../hooks/useJobs';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { JobCard } from './JobCard';
@@ -13,50 +14,32 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onViewJob }: DashboardProps) {
-  const [jobs, setJobs] = useState<TrainingJob[]>(mockJobs);
+  const { jobs, loading, error, refreshJobs } = useJobs();
+  const [systemResources, setSystemResources] = useState<SystemResourcesType | null>(null);
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
-  // Fetch jobs from API if available
+  // Fetch system resources
   useEffect(() => {
-    (async () => {
-      const liveJobs = await listJobs();
-      if (liveJobs && Array.isArray(liveJobs) && liveJobs.length > 0) {
-        setJobs(liveJobs);
+    const fetchSystemResources = async () => {
+      try {
+        const resources = await getSystemResources();
+        if (resources) {
+          setSystemResources(resources);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar recursos do sistema:', err);
       }
-    })();
-  }, []);
+    };
 
-  // Simulate real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setJobs((prevJobs) =>
-        prevJobs.map((job) => {
-          if (job.status === 'training' && job.current_epoch < job.total_epochs) {
-            const newEpoch = Math.min(job.current_epoch + 1, job.total_epochs);
-            const newProgress = (newEpoch / job.total_epochs) * 100;
-            return {
-              ...job,
-              current_epoch: newEpoch,
-              progress: newProgress,
-              metrics: {
-                ...job.metrics,
-                current: job.metrics.current ? {
-                  ...job.metrics.current,
-                  mAP50: Math.min(job.metrics.current.mAP50 + Math.random() * 0.005, 0.99),
-                  box_loss: Math.max(job.metrics.current.box_loss - Math.random() * 0.001, 0.01),
-                } : undefined,
-              },
-              eta_seconds: job.eta_seconds ? Math.max(job.eta_seconds - 30, 0) : 0,
-            };
-          }
-          return job;
-        })
-      );
-      setLastUpdate(new Date());
-    }, 5000);
-
+    fetchSystemResources();
+    const interval = setInterval(fetchSystemResources, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  // Update timestamp when jobs change
+  useEffect(() => {
+    setLastUpdate(new Date());
+  }, [jobs]);
 
   const stats = getJobStats(jobs);
   const activeJobs = jobs.filter((j) => j.status === 'training');
@@ -206,7 +189,7 @@ export function Dashboard({ onViewJob }: DashboardProps) {
 
           {/* System Resources */}
           <div>
-            <SystemResources resources={mockSystemResources} />
+            {systemResources && <SystemResources resources={systemResources} />}
           </div>
         </div>
       </div>

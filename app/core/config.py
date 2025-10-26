@@ -15,12 +15,12 @@ class Settings(BaseSettings):
     
     # Servidor
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = 8060
     DEBUG: bool = False
     
     # Segurança
     SECRET_KEY: str = "your-secret-key-change-in-production"
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://localhost:3002"]
     API_SECRET: str = os.getenv("API_SECRET", "change-me-api-secret")
     CALLBACK_SECRET: str = os.getenv("CALLBACK_SECRET", "change-me-callback-secret")
     

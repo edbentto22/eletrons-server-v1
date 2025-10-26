@@ -1,6 +1,7 @@
 import type { TrainingJob, SystemResources } from '../types/training';
 
-const BASE = import.meta.env.VITE_TRAINING_SERVER_URL;
+const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8060';
+const API_SECRET = 'v63ilgo6j41o7xn75c'; // Chave API do servidor
 
 async function safeFetch<T>(url: string, init?: RequestInit): Promise<T | null> {
   try {
@@ -8,13 +9,16 @@ async function safeFetch<T>(url: string, init?: RequestInit): Promise<T | null> 
       ...init,
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_SECRET}`,
         ...(init?.headers || {}),
       },
     });
+    
     if (!res.ok) {
-      console.warn('API response not ok', res.status, url);
+      console.warn('API response not ok', res.status, url, await res.text());
       return null;
     }
+    
     return await res.json() as T;
   } catch (err) {
     console.warn('API fetch error', url, err);
@@ -24,33 +28,33 @@ async function safeFetch<T>(url: string, init?: RequestInit): Promise<T | null> 
 
 export async function listJobs(): Promise<TrainingJob[] | null> {
   if (!BASE) return null;
-  return safeFetch<TrainingJob[]>(`${BASE}/api/v1/jobs`);
+  return safeFetch<TrainingJob[]>(`${BASE}/jobs/`);
 }
 
 export async function getJob(jobId: string): Promise<TrainingJob | null> {
   if (!BASE) return null;
-  return safeFetch<TrainingJob>(`${BASE}/api/v1/jobs/${jobId}`);
+  return safeFetch<TrainingJob>(`${BASE}/jobs/${jobId}`);
 }
 
 export async function cancelJob(jobId: string): Promise<{ success: boolean } | null> {
   if (!BASE) return null;
-  return safeFetch<{ success: boolean }>(`${BASE}/api/v1/jobs/${jobId}/cancel`, { method: 'POST' });
+  return safeFetch<{ success: boolean }>(`${BASE}/training/${jobId}/stop`, { method: 'POST' });
 }
 
 export async function createJob(payload: any): Promise<{ job_id: string } | null> {
   if (!BASE) return null;
-  return safeFetch<{ job_id: string }>(`${BASE}/api/v1/train`, { method: 'POST', body: JSON.stringify(payload) });
+  return safeFetch<{ job_id: string }>(`${BASE}/training/start`, { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export async function getSystemResources(): Promise<SystemResources | null> {
   if (!BASE) return null;
-  return safeFetch<SystemResources>(`${BASE}/api/v1/system/resources`);
+  return safeFetch<SystemResources>(`${BASE}/system/resources`);
 }
 
 export function connectJobEvents(jobId: string): EventSource | null {
   if (!BASE) return null;
   try {
-    const es = new EventSource(`${BASE}/api/v1/jobs/${jobId}/events`, { withCredentials: false });
+    const es = new EventSource(`${BASE}/training/${jobId}/stream`, { withCredentials: false });
     return es;
   } catch (err) {
     console.warn('SSE connection error', err);
