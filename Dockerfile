@@ -8,22 +8,8 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Instalar dependências do sistema
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    curl \
-    wget \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 libgtk-3-0 libgl1 curl wget git && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Criar usuário não-root
 RUN useradd --create-home --shell /bin/bash yolo
