@@ -4,8 +4,8 @@ services:
   yolo-training-system:
     build: .
     container_name: yolo-training-system
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     volumes:
       # Dados persistentes
       - ./data:/home/yolo/app/data
@@ -30,8 +30,8 @@ services:
   # yolo-training-system-gpu:
   #   build: .
   #   container_name: yolo-training-system-gpu
-  #   ports:
-  #     - "8000:8000"
+  #   expose:
+  #     - "8000"
   #   volumes:
   #     - ./data:/home/yolo/app/data
   #     - ./logs:/home/yolo/app/logs
