@@ -1,0 +1,176 @@
+# ========================================
+# .dockerignore - Sistema de Treinamento YOLO
+# Otimização para Coolify e Docker BuildKit
+# ========================================
+
+# ========================================
+# ARQUIVOS DE DESENVOLVIMENTO
+# ========================================
+.git/
+.gitignore
+.env*
+!.env.example
+*.md
+!README.md
+docs/
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+
+# ========================================
+# DEPENDÊNCIAS E CACHE
+# ========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/
+.pnp.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ========================================
+# DADOS E MODELOS (GRANDES)
+# ========================================
+datasets/
+!datasets/.gitkeep
+models/
+!models/.gitkeep
+data/
+!data/.gitkeep
+logs/
+!logs/.gitkeep
+checkpoints/
+!checkpoints/.gitkeep
+*.pt
+*.pth
+*.onnx
+*.engine
+*.trt
+*.zip
+*.tar.gz
+*.rar
+
+# ========================================
+# ARQUIVOS TEMPORÁRIOS
+# ========================================
+tmp/
+temp/
+.tmp/
+.temp/
+*.tmp
+*.temp
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# ========================================
+# SISTEMA OPERACIONAL
+# ========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# ========================================
+# IDEs E EDITORES
+# ========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.metadata
+.classpath
+.settings/
+
+# ========================================
+# BACKUP E VERSÕES
+# ========================================
+Backup/
+BACKUP/
+backup/
+*.bak
+*.backup
+*.old
+NVME/
+SYSTEM/
+
+# ========================================
+# ARQUIVOS ESPECÍFICOS DO PROJETO
+# ========================================
+# Screenshots e documentação visual
+Screenshot*
+[coolify]*
+*.pdf
+
+# Arquivos de configuração local
+coolify.yml
+docker-compose.yml
+!docker-compose.coolify.yml
+
+# Scripts de teste e desenvolvimento
+test_*.py
+create_*.py
+restore_*.py
+setup.py
+
+# Interface antiga (manter apenas interface-design)
+web-ui/
+YOLO/
+
+# ========================================
+# ARQUIVOS GRANDES DESNECESSÁRIOS
+# ========================================
+# Modelos pré-treinados (baixados durante runtime)
+yolov*.pt
+*.weights
+
+# Datasets compactados
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+
+# ========================================
+# CONFIGURAÇÕES ESPECÍFICAS COOLIFY
+# ========================================
+# Manter apenas arquivos essenciais para build
+!requirements.txt
+!main.py
+!run_server.py
+!test_health.py
+!app/
+!interface-design/

@@ -3,8 +3,6 @@
 # Autor: Sistema de Treinamento YOLO
 # Data: 2025
 
-version: '3.8'
-
 services:
   # ========================================
   # BACKEND - Sistema de Treinamento YOLO
@@ -13,8 +11,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - BUILDKIT_INLINE_CACHE=1
     container_name: yolo-training-backend
     
     # Configuração de rede para Coolify
@@ -107,10 +103,6 @@ services:
     build:
       context: ./interface-design
       dockerfile: Dockerfile
-      args:
-        - BUILDKIT_INLINE_CACHE=1
-        - VITE_API_URL=${BACKEND_URL:-http://localhost:8060}
-        - VITE_API_SECRET=${API_SECRET}
     container_name: yolo-training-frontend
     
     # Configuração de rede para Coolify
